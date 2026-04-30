@@ -17,10 +17,9 @@ def main():
     choice = questionary.select(
         "Scegli un comando:",
         choices=[
-            "am config init - Inizializza config utente",
+            "am config init - Inizializza user-config",
             "am project list - Lista progetti",
             "am workspace status - Status workspace",
-            "am shell - Entra nella shell",
             "Esci"
         ]
     ).ask()
