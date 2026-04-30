@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  amstero-toolbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: amstero-toolbox:latest
+    container_name: amstero-toolbox
+    volumes:
+      - ..:/workspace/sviluppo:ro
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
