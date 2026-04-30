@@ -1,4 +1,66 @@
 # Amstero Core
+<!-- amstero:quick-start -->
+
+## Quick Start
+
+### Prerequisiti
+
+- **macOS**: [OrbStack](https://orbstack.dev/) (consigliato)
+- **Windows**: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Linux**: segui la [guida ufficiale](https://docs.docker.com/engine/install/), oppure su Ubuntu:
+  ```bash
+  curl -fsSL https://get.docker.com | sh
+  ```
+
+### Setup
+
+1. Crea una cartella per il workspace (es. `AMSTERO_WORKSPACE`)
+
+2. Scarica lo ZIP da GitHub:
+   https://github.com/cdario79/amstero-core/archive/refs/heads/main.zip
+
+3. Estrai il contenuto in `AMSTERO_WORKSPACE/repos/`
+
+4. Il risultato finale sarà:
+   ```
+   AMSTERO_WORKSPACE/
+   └── repos/
+       └── amstero-core-code/
+           ├── docker/
+           ├── install.sh
+           └── ...
+   ```
+
+5. Apri il terminale in `repos/amstero-core-code` e avvia:
+   ```bash
+   cd docker
+   docker compose up --build
+   ```
+
+Se hai `git`:
+   ```bash
+   mkdir AMSTERO_WORKSPACE
+   cd AMSTERO_WORKSPACE
+   mkdir repos
+   git clone https://github.com/cdario79/amstero-core.git repos/amstero-core-code
+   cd repos/amstero-core-code
+   ```
+
+oppure manualmente:
+
+```bash
+mkdir -p repos
+# sposta la cartella estratta in repos/amstero-core-code
+```
+
+### Avvio
+
+```bash
+cd docker
+docker compose up --build
+```
+
+<!-- amstero:quick-start:end -->
 
 Amstero Core è il cuore operativo del sistema Amstero.
 
