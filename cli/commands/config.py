@@ -13,6 +13,50 @@ RUNTIME_PATH = Path("/workspace/runtime/credentials")
 ACCOUNTS_FILE = USER_CONFIG_PATH / "accounts.json"
 
 
+def encrypt_with_age(data: str, passphrase: str) -> str:
+    import base64
+    import json
+    import os
+    import hashlib
+    from cryptography.fernet import Fernet
+
+    # Generate random salt
+    salt = os.urandom(16)
+
+    # Derive key using PBKDF2
+    key = hashlib.pbkdf2_hmac('sha256', passphrase.encode(), salt, 100000, dklen=32)
+
+    # Use Fernet (AES-128-CBC with HMAC)
+    f = Fernet(base64.urlsafe_b64encode(key))
+    encrypted = f.encrypt(data.encode())
+
+    # Package with salt
+    result = {
+        'salt': base64.b64encode(salt).decode(),
+        'data': base64.b64encode(encrypted).decode()
+    }
+    return base64.b64encode(json.dumps(result).encode()).decode()
+
+
+def decrypt_with_age(encrypted_data: str, passphrase: str) -> str:
+    import base64
+    import json
+    import hashlib
+    from cryptography.fernet import Fernet
+
+    # Decode wrapper
+    wrapper = json.loads(base64.b64decode(encrypted_data.encode()).decode())
+
+    # Derive key
+    salt = base64.b64decode(wrapper['salt'])
+    key = hashlib.pbkdf2_hmac('sha256', passphrase.encode(), salt, 100000, dklen=32)
+
+    # Decrypt
+    f = Fernet(base64.urlsafe_b64encode(key))
+    decrypted = f.decrypt(base64.b64decode(wrapper['data']))
+    return decrypted.decode()
+
+
 def load_accounts():
     if not ACCOUNTS_FILE.exists():
         return {"version": "1.0", "credentials": {}, "default": None}
@@ -170,12 +214,7 @@ def create_new_config():
         "scope": ["*"]
     }
 
-    token_encrypted = subprocess.run(
-        ["age", "--passphrase", "-p"],
-        input=json.dumps(credential_data),
-        capture_output=True,
-        text=True
-    ).stdout
+    token_encrypted = encrypt_with_age(json.dumps(credential_data), passphrase)
 
     cred_file = CREDENTIALS_PATH / "github" / f"{cred_name}.age"
     cred_file.write_text(token_encrypted)
@@ -267,7 +306,10 @@ credentials/api/*.age
     print()
 
 
-def unlock():
+def unlock(args=None):
+    if args is None:
+        args = []
+
     if not USER_CONFIG_PATH.exists():
         print("❌ User-config non trovato. Esegui prima 'am config init'")
         return
@@ -276,8 +318,17 @@ def unlock():
         print("❌ accounts.json non trovato. Esegui prima 'am config init'")
         return
 
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--passphrase", "-p", help="Passphrase per sbloccare")
+    parsed, _ = parser.parse_known_args(args)
+    args_passphrase = parsed.passphrase if parsed else None
+
     print("\n🔓 Sblocco credentials...")
-    passphrase = questionary.password("Inserisci la passphrase:").ask()
+    if args_passphrase:
+        passphrase = args_passphrase
+    else:
+        passphrase = questionary.password("Inserisci la passphrase:").ask()
 
     RUNTIME_PATH.mkdir(parents=True, exist_ok=True)
     (RUNTIME_PATH / "github").mkdir(parents=True, exist_ok=True)
@@ -290,13 +341,8 @@ def unlock():
         cred_file = USER_CONFIG_PATH / info["credential"]
         if cred_file.exists():
             try:
-                decrypted = subprocess.run(
-                    ["age", "-d", "-p"],
-                    input=passphrase,
-                    capture_output=True,
-                    text=True,
-                    stdin=open(str(cred_file))
-                ).stdout.strip()
+                encrypted_content = cred_file.read_text()
+                decrypted = decrypt_with_age(encrypted_content, passphrase)
 
                 cred_data = json.loads(decrypted)
 
@@ -322,8 +368,11 @@ def unlock():
             token = (RUNTIME_PATH / "github" / f"{default}.token").read_text()
             (RUNTIME_PATH / "git-credentials").write_text(f"https://x-access-token:{token}@github.com\n")
             subprocess.run(
-                ["git", "config", "--global", "credential.helper", "store --file /workspace/runtime/credentials/git-credentials"],
-                shell=True,
+                ["git", "config", "--global", "credential.helper", "store"],
+                check=False
+            )
+            subprocess.run(
+                ["git", "config", "--global", "credential.store", "/workspace/runtime/credentials/git-credentials"],
                 check=False
             )
             print("✅ Git credential helper configurato!")

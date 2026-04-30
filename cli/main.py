@@ -20,13 +20,22 @@ from commands.config import (
 
 def main():
     if len(sys.argv) > 1:
-        cmd = sys.argv[1]
+        if sys.argv[1] == "config":
+            if len(sys.argv) > 2:
+                cmd = sys.argv[2]
+                args = sys.argv[3:] if len(sys.argv) > 3 else []
+            else:
+                cmd = None
+                args = []
+        else:
+            cmd = sys.argv[1]
+            args = sys.argv[2:] if len(sys.argv) > 2 else []
 
         if cmd == "init":
             init_config()
             return
         elif cmd == "unlock":
-            unlock()
+            unlock(args)
             return
         elif cmd == "lock":
             lock()
@@ -38,10 +47,15 @@ def main():
             list_credentials()
             return
         elif cmd == "add":
-            add_credential(sys.argv[2:] if len(sys.argv) > 2 else [])
+            add_credential(args)
             return
         elif cmd == "remove":
-            remove_credential(sys.argv[2:] if len(sys.argv) > 2 else [])
+            remove_credential(args)
+            return
+        elif cmd is None:
+            pass
+        else:
+            print(f"❌ Comando sconosciuto: {cmd}")
             return
 
     print("\n🤖 Amstero CLI")

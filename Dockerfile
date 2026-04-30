@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m venv /opt/venv
-RUN /opt/venv/bin/pip install questionary
+RUN /opt/venv/bin/pip install questionary cryptography
 ENV PATH="/opt/venv/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y age && rm -rf /var/lib/apt/lists/*
