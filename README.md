@@ -14,51 +14,38 @@
 
 ### Setup
 
-1. Crea una cartella per il workspace (es. `AMSTERO_WORKSPACE`)
+1. Crea una cartella per il workspace (es. `amstero-workspace`)
 
 2. Scarica lo ZIP da GitHub:
    https://github.com/cdario79/amstero-core/archive/refs/heads/main.zip
 
-3. Estrai il contenuto in `AMSTERO_WORKSPACE/repos/`
+3. Estrai il contenuto in `amstero-workspace/repos/`
 
 4. Il risultato finale sarà:
    ```
-   AMSTERO_WORKSPACE/
+   amstero-workspace/
    └── repos/
-       └── amstero-core-code/
+       └── amstero-core-code-main/
            ├── docker/
-           ├── install.sh
            └── ...
    ```
 
-5. Apri il terminale in `repos/amstero-core-code` e avvia:
+5. Apri il terminale in `repos/amstero-core-code-main` e avvia:
    ```bash
    cd docker
    docker compose up --build
    ```
 
-Se hai `git`:
+Oppure se hai `git`:
    ```bash
-   mkdir AMSTERO_WORKSPACE
-   cd AMSTERO_WORKSPACE
+   mkdir amstero-workspace
+   cd amstero-workspace
    mkdir repos
-   git clone https://github.com/cdario79/amstero-core.git repos/amstero-core-code
-   cd repos/amstero-core-code
-   ```
-
-oppure manualmente:
-
-```bash
-mkdir -p repos
-# sposta la cartella estratta in repos/amstero-core-code
-```
-
-### Avvio
-
-```bash
-cd docker
-docker compose up --build
-```
+   git clone https://github.com/cdario79/amstero-core.git repos/amstero-core-main
+   cd repos/amstero-core-main
+   cd docker
+   docker compose up --build
+  ```
 
 <!-- amstero:quick-start:end -->
 
