@@ -8,10 +8,9 @@ echo "========================"
 
 USER_CONFIG="/workspace/repos/amstero-user-config"
 RUNTIME_CREDS="/workspace/runtime/credentials"
+ACCOUNTS_FILE="$USER_CONFIG/accounts.json"
 
 if [ -d "$USER_CONFIG" ]; then
-    ACCOUNTS_FILE="$USER_CONFIG/accounts.json"
-
     if [ -f "$ACCOUNTS_FILE" ]; then
         if [ -f "$RUNTIME_CREDS/.unlocked" ]; then
             echo "✅ Credentials già sbloccati"
@@ -22,34 +21,38 @@ if [ -d "$USER_CONFIG" ]; then
             echo ""
 
             if [ -n "$passphrase" ]; then
-                mkdir -p "$RUNTIME_CREDS"
+                mkdir -p "$RUNTIME_CREDS/github"
 
-                for cred_file in "$USER_CONFIG"/credentials/*.age; do
+                for cred_file in "$USER_CONFIG"/credentials/github/*.age; do
                     if [ -f "$cred_file" ]; then
                         name=$(basename "$cred_file" .age)
 
                         decrypted=$(echo "$passphrase" | age -d -p "$cred_file" 2>/dev/null) || continue
 
-                        echo "$decrypted" > "$RUNTIME_CREDS/$name.token"
-                        echo "   ✅ $name sbloccato"
+                        token=$(echo "$decrypted" | grep -o '"token"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)".*/\1/')
+
+                        if [ -n "$token" ]; then
+                            echo "$token" > "$RUNTIME_CREDS/github/$name.token"
+                            echo "   ✅ $name sbloccato"
+                        fi
                     fi
                 done
 
                 default_cred=$(grep -o '"default"[[:space:]]*:[[:space:]]*"[^"]*"' "$ACCOUNTS_FILE" | sed 's/.*"\([^"]*\)".*/\1/')
 
-                if [ -n "$default_cred" ] && [ -f "$RUNTIME_CREDS/${default_cred}.token" ]; then
+                if [ -n "$default_cred" ] && [ -f "$RUNTIME_CREDS/github/${default_cred}.token" ]; then
                     touch "$RUNTIME_CREDS/.unlocked"
 
-                    token=$(cat "$RUNTIME_CREDS/${default_cred}.token")
+                    token=$(cat "$RUNTIME_CREDS/github/${default_cred}.token")
                     echo "https://x-access-token:${token}@github.com" > "$RUNTIME_CREDS/git-credentials"
                     git config --global credential.helper "store --file /workspace/runtime/credentials/git-credentials"
 
                     echo "✅ Git credential helper configurato!"
                 fi
-
-                rm -f /tmp/git_cred
             fi
         fi
+    elif [ -d "$USER_CONFIG" ]; then
+        echo "⚠️ User-config incompleto. Esegui 'am config init' per completare."
     fi
 else
     echo "ℹ️ User-config non configurato. Esegui 'am config init' per iniziare."

@@ -13,29 +13,35 @@ from commands.config import (
     lock,
     status,
     add_credential,
-    list_credentials
+    list_credentials,
+    remove_credential
 )
 
 
 def main():
     if len(sys.argv) > 1:
-        if sys.argv[1] == "init":
+        cmd = sys.argv[1]
+
+        if cmd == "init":
             init_config()
             return
-        elif sys.argv[1] == "unlock":
+        elif cmd == "unlock":
             unlock()
             return
-        elif sys.argv[1] == "lock":
+        elif cmd == "lock":
             lock()
             return
-        elif sys.argv[1] == "status":
+        elif cmd == "status":
             status()
             return
-        elif sys.argv[1] == "add":
-            add_credential()
-            return
-        elif sys.argv[1] == "list":
+        elif cmd == "list":
             list_credentials()
+            return
+        elif cmd == "add":
+            add_credential(sys.argv[2:] if len(sys.argv) > 2 else [])
+            return
+        elif cmd == "remove":
+            remove_credential(sys.argv[2:] if len(sys.argv) > 2 else [])
             return
 
     print("\n🤖 Amstero CLI")
@@ -48,8 +54,10 @@ def main():
             "am config unlock - Sblocca i token con passphrase",
             "am config lock - Blocca i token (logout)",
             "am config status - Mostra stato credentials",
-            "am config add - Aggiungi nuovo credential",
+            "am config add - Aggiungi nuovo credential (wizard)",
+            "am config add github - Aggiungi credential GitHub",
             "am config list - Lista tutti i credential",
+            "am config remove - Rimuovi credential",
             "am project list - Lista progetti",
             "am workspace status - Status workspace",
             "Esci"
@@ -68,9 +76,14 @@ def main():
     elif "config status" in choice:
         status()
     elif "config add" in choice:
-        add_credential()
+        if "github" in choice:
+            add_credential(["--type", "github"])
+        else:
+            add_credential()
     elif "config list" in choice:
         list_credentials()
+    elif "config remove" in choice:
+        remove_credential()
     elif "project list" in choice:
         print("\n📋 Progetti nel workspace:")
         print("  (nessun progetto configurato)")

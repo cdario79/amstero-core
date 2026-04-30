@@ -1,5 +1,8 @@
 name: amstero-workspace
 
+volumes:
+  amstero-credentials:
+
 services:
   amstero-toolbox:
     build:
@@ -9,6 +12,7 @@ services:
     container_name: amstero-toolbox
     volumes:
       - ../../:/workspace
+      - amstero-credentials:/workspace/runtime/credentials
     stdin_open: true
     tty: true
     working_dir: /workspace
