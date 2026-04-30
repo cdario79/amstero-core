@@ -21,30 +21,28 @@
 
 3. Estrai il contenuto in `amstero-workspace/repos/`
 
-4. Il risultato finale sarà:
+4. La cartella in cui si troverà il contenuto del repo si dovrà chiamare `amstero-core` nel caso non avesse questo nome rinominarla
+
+5. Il risultato finale sarà:
    ```
    amstero-workspace/
    └── repos/
-       └── amstero-core-code-main/
-           ├── docker/
+       └── amstero-core/
            └── ...
    ```
 
-5. Apri il terminale in `repos/amstero-core-code-main` e avvia:
+6. Apri il terminale in `repos/amstero-core` e avvia:
    ```bash
-   cd docker
-   docker compose up --build
+   docker compose up --build -d
    ```
 
-Oppure se hai `git`:
+Oppure se hai `git` sul tuo computer:
    ```bash
-   mkdir amstero-workspace
+   mkdir -p amstero-workspace/repos
    cd amstero-workspace
-   mkdir repos
-   git clone https://github.com/cdario79/amstero-core.git repos/amstero-core-main
-   cd repos/amstero-core-main
-   cd docker
-   docker compose up --build
+   git clone https://github.com/cdario79/amstero-core.git repos/amstero-core
+   cd repos/amstero-core
+   docker compose up --build -d
   ```
 
 <!-- amstero:quick-start:end -->

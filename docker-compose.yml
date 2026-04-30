@@ -1,4 +1,4 @@
-version: '3.8'
+name: amstero-workspace
 
 services:
   amstero-toolbox:
@@ -8,7 +8,7 @@ services:
     image: amstero-toolbox:latest
     container_name: amstero-toolbox
     volumes:
-      - ..:/workspace/sviluppo:ro
+      - ../../:/workspace
     stdin_open: true
     tty: true
     working_dir: /workspace
