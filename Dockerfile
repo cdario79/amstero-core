@@ -39,4 +39,5 @@ ENV AMSTERO_ROOT=/workspace/amstero-core
 
 WORKDIR /workspace
 
+ENTRYPOINT ["bash", "-c", "if [ -f /workspace/repos/amstero-core/bin/entrypoint.sh ]; then chmod +x /workspace/repos/amstero-core/bin/entrypoint.sh && /workspace/repos/amstero-core/bin/entrypoint.sh; else /bin/bash; fi"]
 CMD ["/bin/bash"]
