@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+
+CLI_PATH = "/workspace/repos/amstero-core/cli/main.py"
+
+if __name__ == "__main__":
+    sys.path.insert(0, "/workspace/repos/amstero-core")
+    exec(open(CLI_PATH).read())

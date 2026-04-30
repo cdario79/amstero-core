@@ -1,0 +1,1 @@
+# Amstero CLI package

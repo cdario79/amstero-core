@@ -45,6 +45,24 @@ Oppure se hai `git` sul tuo computer:
    docker compose up --build -d
   ```
 
+### Entrare nel container
+
+Dopo aver avviato i container:
+
+```bash
+docker compose exec -it amstero-toolbox bash
+```
+
+Oppure con la modalità root:
+
+```bash
+docker compose exec -u root -it amstero-toolbox bash
+```
+
+Per uscire dal container: `exit`
+
+---  
+
 <!-- amstero:quick-start:end -->
 
 Amstero Core è il cuore operativo del sistema Amstero.

@@ -9,7 +9,14 @@ RUN apt-get update && apt-get install -y \
     git \
     ca-certificates \
     gnupg \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/venv
+RUN /opt/venv/bin/pip install questionary
+ENV PATH="/opt/venv/bin:${PATH}"
 
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -24,6 +31,9 @@ RUN curl -fsSL "https://opencode.ai/install.sh" | sh \
 RUN git config --global init.defaultBranch main
 RUN git config --global pull.rebase false
 RUN gh config set editor git
+
+RUN ln -s /workspace/repos/amstero-core/bin/am /usr/local/bin/am
+ENV AMSTERO_ROOT=/workspace/amstero-core
 
 WORKDIR /workspace
 
