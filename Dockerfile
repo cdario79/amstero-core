@@ -33,6 +33,10 @@ RUN git config --global pull.rebase false
 RUN gh config set editor git
 
 RUN ln -s /workspace/repos/amstero-core/bin/am /usr/local/bin/am
+
+RUN cp /usr/bin/git /usr/bin/git-orig
+COPY bin/git-wrapper.py /usr/local/bin/git
+RUN chmod +x /usr/local/bin/git
 ENV AMSTERO_ROOT=/workspace/amstero-core
 
 WORKDIR /workspace

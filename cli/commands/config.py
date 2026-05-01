@@ -337,6 +337,8 @@ def unlock(args=None):
     unlocked = []
     failed = []
 
+    (RUNTIME_PATH / "ssh" / "keys").mkdir(parents=True, exist_ok=True)
+
     for name, info in accounts.get("credentials", {}).items():
         cred_file = USER_CONFIG_PATH / info["credential"]
         if cred_file.exists():
@@ -350,13 +352,21 @@ def unlock(args=None):
                     runtime_file = RUNTIME_PATH / "github" / f"{name}.token"
                     runtime_file.write_text(cred_data["token"])
                     unlocked.append(name)
-                    print(f"   ✅ {name} (GitHub)")
+                    print(f"   ✅ {name} (GitHub HTTPS)")
+                elif cred_data.get("type") == "ssh":
+                    private_key_file = RUNTIME_PATH / "ssh" / "keys" / f"{name}.key"
+                    public_key_file = RUNTIME_PATH / "ssh" / "keys" / f"{name}.pub"
+                    private_key_file.write_text(cred_data.get("private_key", ""))
+                    public_key_file.write_text(cred_data.get("public_key", ""))
+                    private_key_file.chmod(0o600)
+                    unlocked.append(name)
+                    print(f"   ✅ {name} (SSH)")
                 else:
                     print(f"   ⚠️ {name}: tipo non supportato")
 
             except Exception as e:
                 failed.append(name)
-                print(f"   ❌ {name}: errore decifrazione")
+                print(f"   ❌ {name}: errore decifrazione - {e}")
         else:
             print(f"   ⚠️ {name}: file non trovato ({info['credential']})")
 
@@ -452,9 +462,15 @@ def add_credential(args=None):
                         help="Tipo di credential")
     parser.add_argument("--name", "-n", help="Nome del credential")
     parser.add_argument("--description", "-d", help="Descrizione")
-    parser.add_argument("--token", help="Token GitHub (solo per type=github)")
-    parser.add_argument("--scope", help="Scope GitHub separati da virgola (solo per type=github)")
-    parser.add_argument("--org", help="Organizzazione GitHub (opzionale)")
+    # GitHub
+    parser.add_argument("--token", help="Token GitHub")
+    parser.add_argument("--github-user", help="Username GitHub")
+    parser.add_argument("--github-email", help="Email GitHub")
+    parser.add_argument("--owners", help="Owner (account/org separati da virgola)")
+    # SSH
+    parser.add_argument("--private-key-path", help="Path alla chiave privata SSH")
+    parser.add_argument("--public-key-path", help="Path alla chiave pubblica SSH")
+    parser.add_argument("--hosts", help="Hosts per SSH (es. github.com,gitlab.com)")
 
     parsed = parser.parse_args(args if args else [])
 
@@ -473,10 +489,11 @@ def add_credential(args=None):
 
     if cred_type == "github":
         add_github_credential(parsed)
+    elif cred_type == "ssh":
+        add_ssh_credential(parsed)
     else:
         print(f"❌ Tipo '{cred_type}' non ancora implementato.")
-        print("   Per ora è disponibile solo GitHub.")
-        print("   Usa 'am config add github' per aggiungere un credential GitHub.")
+        print("   Usa 'am config add github' o 'am config add ssh'")
 
 
 def add_github_credential(parsed):
@@ -509,17 +526,24 @@ def add_github_credential(parsed):
         print("❌ Token richiesto")
         return
 
-    if parsed.scope:
-        scope = [s.strip() for s in parsed.scope.split(",")]
+    if parsed.github_user:
+        github_user = parsed.github_user
     else:
-        scope_input = questionary.text("Scope (repo separati da virgola, * per tutti):", default="*").ask()
-        scope = [s.strip() for s in scope_input.split(",")]
+        github_user = questionary.text("Username GitHub:").ask()
 
-    org = parsed.org
-    if not org:
-        org = questionary.text("Organizzazione (opzionale):").ask()
-        if org == "":
-            org = None
+    if parsed.github_email:
+        github_email = parsed.github_email
+    else:
+        github_email = questionary.text("Email GitHub:").ask()
+
+    if parsed.owners:
+        owners = [s.strip() for s in parsed.owners.split(",")]
+    else:
+        owners_input = questionary.text("Owner (account/organizzazioni separati da virgola):", default=github_user).ask()
+        owners = [s.strip() for s in owners_input.split(",") if s.strip()]
+
+    if not owners:
+        owners = [github_user]
 
     print("\n🔐 Cifratura del credential...")
 
@@ -527,17 +551,14 @@ def add_github_credential(parsed):
 
     credential_data = {
         "type": "github",
+        "auth_type": "https",
+        "github_user": github_user,
+        "github_email": github_email,
         "token": token,
-        "scope": scope,
-        "org": org
+        "owners": owners
     }
 
-    token_encrypted = subprocess.run(
-        ["age", "--passphrase", "-p"],
-        input=json.dumps(credential_data),
-        capture_output=True,
-        text=True
-    ).stdout
+    token_encrypted = encrypt_with_age(json.dumps(credential_data), passphrase)
 
     (CREDENTIALS_PATH / "github").mkdir(parents=True, exist_ok=True)
     cred_file = CREDENTIALS_PATH / "github" / f"{name}.age"
@@ -548,8 +569,7 @@ def add_github_credential(parsed):
         "name": name,
         "credential": f"credentials/github/{name}.age",
         "description": description,
-        "scope": scope,
-        "org": org,
+        "owners": owners,
         "created_at": datetime.now().isoformat() + "Z",
         "updated_at": datetime.now().isoformat() + "Z"
     }
@@ -559,9 +579,89 @@ def add_github_credential(parsed):
 
     save_accounts(accounts)
 
-    print(f"\n✅ Credential '{name}' aggiunto!")
-    print(f"   File: {cred_file}")
-    print(f"   Tipo: GitHub")
+    print(f"\n✅ Credential GitHub '{name}' aggiunto!")
+    print(f"   Owners: {', '.join(owners)}")
+    print(f"   Per attivarlo: am config unlock")
+    print()
+
+
+def add_ssh_credential(parsed):
+    accounts = load_accounts()
+
+    if parsed.name:
+        name = parsed.name
+    else:
+        name = questionary.text("Nome del credential SSH:").ask()
+
+    if not name:
+        print("❌ Nome richiesto")
+        return
+
+    if name in accounts.get("credentials", {}):
+        print(f"❌ Credential '{name}' esiste già")
+        return
+
+    if parsed.description:
+        description = parsed.description
+    else:
+        description = questionary.text("Descrizione:", default=f"Credential SSH {name}").ask()
+
+    if parsed.private_key_path:
+        private_key = Path(parsed.private_key_path).read_text()
+    else:
+        private_key = questionary.text("Contenuto chiave privata SSH (o path):").ask()
+        if Path(private_key).exists():
+            private_key = Path(private_key).read_text()
+
+    if parsed.public_key_path:
+        public_key = Path(parsed.public_key_path).read_text()
+    else:
+        public_key = questionary.text("Contenuto chiave pubblica SSH (o path):").ask()
+        if Path(public_key).exists():
+            public_key = Path(public_key).read_text()
+
+    passphrase = questionary.text("Passphrase chiave (vuoto se nessuna):", default="").ask()
+    if passphrase == "":
+        passphrase = None
+
+    if parsed.hosts:
+        hosts = [s.strip() for s in parsed.hosts.split(",")]
+    else:
+        hosts_input = questionary.text("Hosts (es. github.com,gitlab.com):", default="github.com").ask()
+        hosts = [s.strip() for s in hosts_input.split(",") if s.strip()]
+
+    print("\n🔐 Cifratura del credential SSH...")
+
+    passphrase_for_encrypt = questionary.password("Inserisci la passphrase:").ask()
+
+    credential_data = {
+        "type": "ssh",
+        "private_key": private_key,
+        "public_key": public_key,
+        "passphrase": passphrase,
+        "hosts": hosts
+    }
+
+    token_encrypted = encrypt_with_age(json.dumps(credential_data), passphrase_for_encrypt)
+
+    (CREDENTIALS_PATH / "ssh").mkdir(parents=True, exist_ok=True)
+    cred_file = CREDENTIALS_PATH / "ssh" / f"{name}.age"
+    cred_file.write_text(token_encrypted)
+
+    accounts["credentials"][name] = {
+        "type": "ssh",
+        "name": name,
+        "credential": f"credentials/ssh/{name}.age",
+        "description": description,
+        "hosts": hosts,
+        "created_at": datetime.now().isoformat() + "Z",
+        "updated_at": datetime.now().isoformat() + "Z"
+    }
+
+    save_accounts(accounts)
+
+    print(f"\n✅ Credential SSH '{name}' aggiunto!")
+    print(f"   Hosts: {', '.join(hosts)}")
     print(f"   Per attivarlo: am config unlock")
     print()
 
